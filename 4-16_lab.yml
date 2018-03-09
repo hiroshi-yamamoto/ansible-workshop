@@ -1,0 +1,77 @@
+--
+- hosts: web
+  vars:
+    package: httpd
+    supported_os: "RedHat"
+    supported_version: "7"
+    kernel_version: {{ ansible_kernel  }}
+    ipv4_address: {{ ansible_all_ipv4_addresses  }}
+    eth0_ipv4_address: {{ ansbile_eth0.ipv4.address }}
+
+  tasks:
+  - fail:
+      msg: "Not Supported OS" 
+    when:
+      - ansible_distribution != "{{ supported_os }}"
+      - ansible_distribution_major_version >= "{{ supported_version}}"
+
+  - name: SElinux Enfocing
+    selinux:
+      policy: targeted
+      state: enfocing
+
+  -name: User add
+    user:
+      name: web-admin
+      group: wheel
+      shell: /bin/bash
+      createhome: no
+
+  - name: sshd Root login disabled
+    lineinfile:
+      dest: /etc/ssh/sshd_config
+      regexp: '^PermitRootLogin'
+      insertafter: '^#PermitRootLogin'
+      line: 'PermitRootLogin no'
+      backup: yes
+    notify:
+      name: restart sshd
+
+  - name: install httpd and firewalld
+    yum:
+      name: "{{ item }}"
+      state: latest
+    with_items:
+      - httpd
+      - firewalld
+
+  - name: start httpd and firewalld
+    service:
+      name: "{{ item }}"
+      state: start
+      enabled: yes
+    with_items:
+      - httpd
+      -firewalld
+
+  - name: define httpd
+    lineinfile:
+      path: /etc/httpd/conf/httpd.conf
+      regexp: '^Listen'
+      insertafter: '^#Listen'
+      line: 'Listen 8080'
+      backup: yes
+
+  - name: index.html update
+    lineinfile:
+      path: /var/www/html/index.html
+      line: "{{ inventory_hostname ipv4_address}}"
+      backup: yes
+
+  handlers:
+  - name: restart sshd
+    systemd:
+      name: sshd
+      state: restarted
+      enabled: yes
+

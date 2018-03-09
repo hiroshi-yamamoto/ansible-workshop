@@ -1,0 +1,36 @@
+---
+- hosts: web
+  vars:
+    package: httpd
+
+  tasks:
+  - name: stopped httpd
+    service:
+      name: "{{ package }}"
+      state: stopped
+      enabled: no
+
+  - name: removed httpd
+    yum:
+      name: "{{ package }}"
+      state: absent
+
+  - name: removed directory
+    file:
+      path: "{{ item }}"
+      state: absent
+    with_items:
+    - /var/www/html
+    - /etc/httpd
+    - /var/log/httpd
+
+  - name: httpd firewall rule removed
+    firewalld:
+      service: "{{ item }}"
+      permanent: true
+      state: disabled
+      immediate: true
+    with_items:
+    - http
+    - https
+

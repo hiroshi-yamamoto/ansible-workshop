@@ -1,0 +1,61 @@
+---
+- hosts: web
+  vars:
+    package: httpd
+
+  tasks:
+  - name: stopped httpd
+    service:
+      name: "{{ package }}"
+      state: stopped
+      enabled: no
+
+  - name: removed httpd
+    yum:
+      name: "{{ package }}"
+      state: absent
+    #  notify: remove httpd
+
+  - name: httpd firewall rule removed
+    firewalld:
+      service: "{{ item }}"
+      permanent: true
+      state: disabled
+      immediate: true
+    with_items:
+    - http
+    - https
+
+  - name: tcp8080 firewall rule removed
+    firewalld:
+      port: 8080/tcp
+      permanent: true
+      state: disabled
+      immediate: true
+
+  - name: firewalld stop
+    systemd:
+      name: firewalld
+      state: stopped
+      enabled: false
+
+  - name: unistall firewalld
+    yum:
+      name: firewalld
+      state: absent
+
+
+  - name: httpd directory removed
+    file:
+      path: "{{ item }}"
+      state: absent
+    with_items:
+      - /var/www/html
+      - /etc/httpd
+      - /var/log/httpd
+
+  handlers:
+  - name: remove httpd
+    debug:
+      msg: "Remove httpd"
+
