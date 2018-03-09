@@ -1,0 +1,17 @@
+---
+- hosts: web
+  vars:
+    package: httpd
+
+  tasks:
+  - name: install httpd
+    yum:
+      name: {{ package }}
+      state: latest
+
+  - name: start httpd
+    service:
+      name: "{{ package }}"
+      state: start
+      enabled: yes
+
